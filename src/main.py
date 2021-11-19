@@ -5,13 +5,14 @@
 
 import argparse
 import gzip
+import logging
 import pickle
 
 import scipy
-from data_helper import DataHelper
-from eval.evaluation import Evaluator
-from models.classifiers import ActionClassifier, RelationClassifier
-from models.parser import RstParser
+from stagedp.data_helper import DataHelper
+from stagedp.eval.evaluation import Evaluator
+from stagedp.models.classifiers import ActionClassifier, RelationClassifier
+from stagedp.models.parser import RstParser
 
 
 def train_model(data_helper):
@@ -27,9 +28,12 @@ def train_model(data_helper):
     rst_parser.action_clf.train(scipy.sparse.vstack(action_fvs), action_labels)
     # train relation classifier
     for level in [0, 1, 2]:
-        relation_fvs, relation_labels = list(zip(*data_helper.gen_relation_train_data(level)))
-        print('{} relation samples at level {}.'.format(len(relation_labels), level))
-        rst_parser.relation_clf.train(scipy.sparse.vstack(relation_fvs), relation_labels, level)
+        try:
+            relation_fvs, relation_labels = list(zip(*data_helper.gen_relation_train_data(level)))
+            logging.info('{} relation samples at level {}.'.format(len(relation_labels), level))
+            rst_parser.relation_clf.train(scipy.sparse.vstack(relation_fvs), relation_labels, level)
+        except ValueError:
+            pass
     rst_parser.save(model_dir='../data/model')
 
 
@@ -50,7 +54,7 @@ if __name__ == '__main__':
     args = parse_args()
     # Use brown clusters
     with gzip.open("../data/resources/bc3200.pickle.gz") as fin:
-        print('Load Brown clusters for creating features ...')
+        logging.info('Load Brown clusters for creating features ...')
         brown_clusters = pickle.load(fin)
     data_helper = DataHelper(max_action_feat_num=330000, max_relation_feat_num=300000,
                              min_action_feat_occur=1, min_relation_feat_occur=1,

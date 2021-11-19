@@ -18,7 +18,7 @@ class RstParser(object):
     def save(self, model_dir):
         """Save models
         """
-        # self.action_clf.save(os.path.join(model_dir, 'model.action.gz'))
+        self.action_clf.save(os.path.join(model_dir, 'model.action.gz'))
         self.relation_clf.save(os.path.join(model_dir, 'model.relation.gz'))
 
     def load(self, model_dir):

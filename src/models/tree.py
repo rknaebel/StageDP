@@ -6,14 +6,12 @@
 import sys
 from os.path import isfile
 
-from features.extraction import ActionFeatureGenerator, RelationFeatureGenerator
-from models.state import ParsingState
+from stagedp.features.extraction import ActionFeatureGenerator, RelationFeatureGenerator
+from stagedp.models.state import ParsingState
 from nltk import Tree
-from nltk.draw import TreeWidget
-from nltk.draw.util import CanvasFrame
-from utils.document import Doc
-from utils.other import rel2class
-from utils.span import SpanNode
+from stagedp.utils.document import Doc
+from stagedp.utils.other import rel2class
+from stagedp.utils.span import SpanNode
 
 
 class RstTree(object):
@@ -33,6 +31,7 @@ class RstTree(object):
         """
         self.doc = doc
 
+    # TODO make this static constructor, simplify init with tree and doc (makes more sense to me)
     def build(self):
         """ Build BINARY RST tree
         """
@@ -348,42 +347,6 @@ class RstTree(object):
         for node in tree_nodes:
             assert node.pnode.depth >= 0
             node.depth = node.pnode.depth + 1
-            # for node in tree_nodes:
-            #     if node.lnode is not None and node.rnode is not None:
-            #         node.lnode.pnode = node
-            #         node.rnode.pnode = node
-            #         if node.form == 'NN':
-            #             node.lnode.prop = "Nucleus"
-            #             node.lnode.relation = node.child_relation
-            #             node.rnode.prop = "Nucleus"
-            #             node.rnode.relation = node.child_relation
-            #         elif node.form == 'NS':
-            #             node.lnode.prop = "Nucleus"
-            #             node.lnode.relation = "span"
-            #             node.rnode.prop = "Satellite"
-            #             node.rnode.relation = node.child_relation
-            #         elif node.form == 'SN':
-            #             node.lnode.prop = "Satellite"
-            #             node.lnode.relation = node.child_relation
-            #             node.rnode.prop = "Nucleus"
-            #             node.rnode.relation = "span"
-            #         else:
-            #             raise ValueError("Unrecognized form: {}".format(node.form))
-
-    @staticmethod
-    def BFT(tree):
-        """ Breadth-first treavsal on general RST tree
-
-        :type tree: SpanNode instance
-        :param tree: an general RST tree
-        """
-        queue = [tree]
-        bft_nodelist = []
-        while queue:
-            node = queue.pop(0)
-            bft_nodelist.append(node)
-            queue += node.nodelist
-        return bft_nodelist
 
     @staticmethod
     def BFTbin(tree):
@@ -534,9 +497,12 @@ class RstTree(object):
                 node_list.append(node.lnode)
         return ''.join(parse)
 
+    # TODO check remove?
     def draw_rst(self, fname):
         """ Draw RST tree into a file
         """
+        from nltk.draw.tree import TreeWidget
+        from nltk.draw.util import CanvasFrame
         tree_str = self.get_parse()
         if not fname.endswith(".ps"):
             fname += ".ps"
@@ -558,8 +524,3 @@ class RstTree(object):
             b = (node.edu_span, node.prop, relation)
             brackets.append(b)
         return brackets
-
-
-if __name__ == '__main__':
-    tree = RstTree(fdis='', fmerge='')
-    tree.build()
