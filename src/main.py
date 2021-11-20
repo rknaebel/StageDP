@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# author: Yizhong
-# created_at: 10/26/2016 下午8:36
-
 import argparse
 import gzip
 import logging
@@ -15,7 +10,7 @@ from stagedp.models.classifiers import ActionClassifier, RelationClassifier
 from stagedp.models.parser import RstParser
 
 
-def train_model(data_helper):
+def train_model(data_helper, model_dir):
     # initialize the parser
     action_clf = ActionClassifier(data_helper.action_feat_template, data_helper.action_map)
     relation_clf = RelationClassifier(data_helper.relation_feat_template_level_0,
@@ -34,7 +29,7 @@ def train_model(data_helper):
             rst_parser.relation_clf.train(scipy.sparse.vstack(relation_fvs), relation_labels, level)
         except ValueError:
             pass
-    rst_parser.save(model_dir='../data/model')
+    rst_parser.save(model_dir=model_dir)
 
 
 def parse_args():
@@ -45,15 +40,16 @@ def parse_args():
                         help='whether to train new models')
     parser.add_argument('--eval', action='store_true',
                         help='whether to do evaluation')
-    parser.add_argument('--train_dir', help='train data directory')
-    parser.add_argument('--eval_dir', help='eval data directory')
+    parser.add_argument('--model_dir', help='model directory')
+    parser.add_argument('--data_dir', help='train/eval data directory')
+    parser.add_argument('--data_helper', default="../data/data_helper.bin", help='data helper file')
+    parser.add_argument('--brown_clusters', default="../data/resources/bc3200.pickle.gz", help='brown cluster file')
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = parse_args()
-    # Use brown clusters
-    with gzip.open("../data/resources/bc3200.pickle.gz") as fin:
+    with gzip.open(args.brown_clusters) as fin:
         logging.info('Load Brown clusters for creating features ...')
         brown_clusters = pickle.load(fin)
     data_helper = DataHelper(max_action_feat_num=330000, max_relation_feat_num=300000,
@@ -61,13 +57,14 @@ if __name__ == '__main__':
                              brown_clusters=brown_clusters)
     if args.prepare:
         # Create training data
-        data_helper.create_data_helper(data_dir=args.train_dir)
-        data_helper.save_data_helper('../data/data_helper.bin')
+        data_helper.load_train_data(data_dir=args.data_dir)
+        data_helper.create_data_helper()
+        data_helper.save_data_helper(args.data_helper)
     if args.train:
-        data_helper.load_data_helper('../data/data_helper.bin')
-        data_helper.load_train_data(data_dir=args.train_dir)
-        train_model(data_helper)
+        data_helper.load_data_helper(args.data_helper)
+        data_helper.load_train_data(data_dir=args.data_dir)
+        train_model(data_helper, args.model_dir)
     if args.eval:
         # Evaluate models on the RST-DT test set
-        evaluator = Evaluator(model_dir='../data/model')
-        evaluator.eval_parser(path=args.eval_dir, report=True, bcvocab=brown_clusters, draw=False)
+        evaluator = Evaluator(model_dir=args.model_dir)
+        evaluator.eval_parser(path=args.data_dir, report=True, bcvocab=brown_clusters, draw=False)
