@@ -4,16 +4,16 @@
 # created_at: 10/27/2016 下午7:32
 import os
 
-from features.extraction import ActionFeatureGenerator, RelationFeatureGenerator
-from models.classifiers import ActionClassifier, RelationClassifier
-from models.state import ParsingState
-from models.tree import RstTree
+from stagedp.features.extraction import ActionFeatureGenerator, RelationFeatureGenerator
+from stagedp.models import ActionClassifier, RelationClassifier
+from stagedp.models.state import ParsingState
+from stagedp.models.tree import RstTree
 
 
-class RstParser(object):
-    def __init__(self, action_clf=None, relation_clf=None):
-        self.action_clf = action_clf if action_clf is not None else ActionClassifier()
-        self.relation_clf = relation_clf if relation_clf is not None else RelationClassifier()
+class RstParser:
+    def __init__(self, action_clf, relation_clf):
+        self.action_clf = action_clf
+        self.relation_clf = relation_clf
 
     def save(self, model_dir):
         """Save models
