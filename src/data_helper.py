@@ -1,8 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# author: Yizhong
-# created_at: 16-11-28 下午2:47
-import gzip
+import logging
 import os
 import pickle
 from collections import defaultdict
@@ -13,7 +9,7 @@ from models.tree import RstTree
 from utils.other import vectorize
 
 
-class DataHelper(object):
+class DataHelper:
     def __init__(self, max_action_feat_num=-1, max_relation_feat_num=-1,
                  min_action_feat_occur=1, min_relation_feat_occur=1, brown_clusters=None):
         # number of features, feature selection will be triggered if feature num is larger than this
@@ -59,7 +55,7 @@ class DataHelper(object):
                                                                                  thresh=self.min_relation_feat_occur)
 
     def save_data_helper(self, fname):
-        print('Save data helper...')
+        logging.info('Save data helper...')
         data_info = {
             'action_feat_template': self.action_feat_template,
             'relation_feat_template_level_0': self.relation_feat_template_level_0,
@@ -72,7 +68,7 @@ class DataHelper(object):
             pickle.dump(data_info, fout)
 
     def load_data_helper(self, fname):
-        print('Load data helper ...')
+        logging.info('Load data helper ...')
         with open(fname, 'rb') as fin:
             data_info = pickle.load(fin)
         self.action_feat_template = data_info['action_feat_template']
@@ -121,11 +117,11 @@ class DataHelper(object):
                     freq_table[nrow, ncol] = action_feat_counts[feat][action]
             # Feature selection
             fs = FeatureSelector(topn=topn, thresh=thresh, method='frequency')
-            print('Original action_feat_template size: {}'.format(len(action_feat_template)))
+            logging.info('Original action_feat_template size: {}'.format(len(action_feat_template)))
             action_feat_template = fs.select(action_feat_template, freq_table)
-            print('After feature selection, action_feat_template size: {}'.format(len(self.action_feat_template)))
+            logging.info('After feature selection, action_feat_template size: {}'.format(len(self.action_feat_template)))
         else:
-            print('Action_feat_template size: {}'.format(len(action_feat_template)))
+            logging.info('Action_feat_template size: {}'.format(len(action_feat_template)))
         return action_feat_template
 
     def _build_relation_feat_template(self, relation_samples, level, topn=-1, thresh=1):
@@ -149,12 +145,12 @@ class DataHelper(object):
                     freq_table[nrow, ncol] = relation_feat_counts[feat][relation]
             # Feature selection
             fs = FeatureSelector(topn=topn, thresh=thresh, method='frequency')
-            print('Original relation_feat_template size at level {}: {}'.format(level, len(relation_feat_template)))
+            logging.info('Original relation_feat_template size at level {}: {}'.format(level, len(relation_feat_template)))
             relation_feat_template = fs.select(relation_feat_template, freq_table)
-            print('After feature selection, relation_feat_template size at level {}: {}'.format(level, len(
+            logging.info('After feature selection, relation_feat_template size at level {}: {}'.format(level, len(
                 relation_feat_template)))
         else:
-            print('Relation_feat_template size at level {}: {}'.format(level, len(relation_feat_template)))
+            logging.info('Relation_feat_template size at level {}: {}'.format(level, len(relation_feat_template)))
         return relation_feat_template
 
     def _build_action_map(self, action_samples):
@@ -179,9 +175,9 @@ class DataHelper(object):
                 nrelation = len(self.relation_map)
                 self.relation_map[relation] = nrelation
                 self.relation_cnt[relation] = 1
-        print('{} types of relations: {}'.format(len(self.relation_map), self.relation_map.keys()))
+        logging.info('{} types of relations: {}'.format(len(self.relation_map), self.relation_map.keys()))
         for relation, cnt in self.relation_cnt.items():
-            print('{}\t{}'.format(relation, cnt))
+            logging.info('{}\t{}'.format(relation, cnt))
 
     @staticmethod
     def save_feature_template(feature_template, fname):

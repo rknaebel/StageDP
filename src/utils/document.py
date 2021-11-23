@@ -7,13 +7,11 @@ from os.path import isfile
 from utils.token import Token
 
 
-class Doc(object):
+class Doc:
     """ Build one doc instance from *.merge file
     """
 
     def __init__(self):
-        """
-        """
         self.token_dict = None
         self.edu_dict = None
         self.rel_paris = None
@@ -101,10 +99,3 @@ class Doc(object):
             except KeyError:
                 edu_dict[eidx] = [gidx]
         return edu_dict
-
-
-if __name__ == '__main__':
-    doc = Doc()
-    fmerge = "../data/training/file1.merge"
-    doc.read_from_fmerge(fmerge)
-    print(len(doc.edudict))

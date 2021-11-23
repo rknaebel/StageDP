@@ -41,13 +41,15 @@ def parse_args():
     parser.add_argument('--eval', action='store_true',
                         help='whether to do evaluation')
     parser.add_argument('--model_dir', help='model directory')
-    parser.add_argument('--data_dir', help='train/eval data directory')
+    parser.add_argument('--train_dir', help='train data directory')
+    parser.add_argument('--test_dir', help='test data directory')
     parser.add_argument('--data_helper', default="../data/data_helper.bin", help='data helper file')
     parser.add_argument('--brown_clusters', default="../data/resources/bc3200.pickle.gz", help='brown cluster file')
     return parser.parse_args()
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     args = parse_args()
     with gzip.open(args.brown_clusters) as fin:
         logging.info('Load Brown clusters for creating features ...')
@@ -57,14 +59,14 @@ if __name__ == '__main__':
                              brown_clusters=brown_clusters)
     if args.prepare:
         # Create training data
-        data_helper.load_train_data(data_dir=args.data_dir)
+        data_helper.load_train_data(data_dir=args.train_dir)
         data_helper.create_data_helper()
         data_helper.save_data_helper(args.data_helper)
     if args.train:
         data_helper.load_data_helper(args.data_helper)
-        data_helper.load_train_data(data_dir=args.data_dir)
+        data_helper.load_train_data(data_dir=args.train_dir)
         train_model(data_helper, args.model_dir)
     if args.eval:
         # Evaluate models on the RST-DT test set
         evaluator = Evaluator(model_dir=args.model_dir)
-        evaluator.eval_parser(path=args.data_dir, report=True, bcvocab=brown_clusters, draw=False)
+        evaluator.eval_parser(path=args.test_dir, report=True, bcvocab=brown_clusters, draw=False)
