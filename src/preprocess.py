@@ -16,7 +16,7 @@ def load_parser():
     tmp_stdout = sys.stdout
     sys.stdout = sys.stderr
     stanza.download(lang='en')
-    parser = stanza.Pipeline(lang='en')
+    parser = stanza.Pipeline(lang='en', processors='tokenize,pos,lemma,depparse')
     sys.stdout = tmp_stdout
     return parser
 

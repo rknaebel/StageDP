@@ -18,6 +18,6 @@ class Token(object):
         # Dependency label, head index
         self.dep_label, self.hidx = None, None
         # NER, Partial parse tree
-        self.ner, self.partial_parse = None, None
+        # self.ner, self.partial_parse = None, None
         # EDU index
         self.eduidx = None
