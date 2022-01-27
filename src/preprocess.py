@@ -8,6 +8,8 @@ import click
 import nltk
 from tqdm import tqdm
 
+from stagedp.utils.other import rel2class
+
 
 def load_parser():
     import stanza
@@ -58,6 +60,10 @@ def main(source_path: str, target_path: str):
         dis_tree = nltk.tree.Tree.fromstring(
             re.sub(r'\s+', ' ', dis_text).replace('//TT_ERR', '').strip(),
             leaf_pattern=r"\_!.+?\_!|[^ ()]+")
+        # convert (simplify) relation labels
+        for tt in dis_tree.subtrees(filter=lambda t: t.label() == 'rel2par'):
+            label = tt.pop()
+            tt.insert(0, rel2class.get(label.lower(), label.upper()))
         edus = [edu[2:-2].strip() for edu in dis_tree.leaves() if edu.startswith('_!')]
         text = ' '.join(edus).replace('<P>', '')
         parses = parser(text)
