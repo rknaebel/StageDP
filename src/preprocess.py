@@ -33,30 +33,32 @@ def merge_edus_into_parses(edus: List[str], parses):
             if tok.end_char - edu_offset > edu_length:
                 edu_i += 1
                 edu = edus[edu_i].replace('<P>', '')
-                if edus[edu_i-1].endswith('<P>'):
+                if edus[edu_i - 1].endswith('<P>'):
                     par_i += 1
                 edu_offset = tok.start_char
                 edu_length = len(edu)
-            result.append((sent_i, tok_i + 1, tok.text, tok.lemma, tok.upos, tok.deprel, tok.head, '_', '_',
-                           edu_i, par_i))
+            result.append((sent_i, tok_i + 1, tok.text, tok.lemma, tok.upos, tok.xpos, tok.deprel, tok.head, '_', '_',
+                           edu_i + 1, par_i))
     return result
 
 
 @click.command()
 @click.argument('source-path', type=str)
 @click.argument('target-path', type=str)
-def main(source_path: str, target_path: str):
-    os.makedirs(os.path.join(target_path, 'train'), exist_ok=True)
-    os.makedirs(os.path.join(target_path, 'test'), exist_ok=True)
+@click.option('-r', '--replace-exist', is_flag=True)
+@click.option('-d', '--delete-target', is_flag=True)
+def main(source_path: str, target_path: str, replace_exist: bool, delete_target: bool):
+    if delete_target:
+        for fn in os.listdir(target_path):
+            os.remove(os.path.join(target_path, fn))
+    os.makedirs(target_path, exist_ok=True)
     parser = load_parser()
-    dis_files = glob.glob(f'{source_path}/**/wsj_*.dis')
+    dis_files = glob.glob(f'{source_path}/*.dis')
     for dis_file in tqdm(dis_files):
-        sub_dest = 'train' if 'TRAINING' in dis_file else 'test'
-        dest = os.path.join(target_path, sub_dest, os.path.basename(f"{dis_file[:-len('.out.dis')]}"))
-        if os.path.exists(f"{dest}.dis"):
+        dest = os.path.join(target_path, os.path.basename(f"{dis_file[:-len('.dis')]}"))
+        if not replace_exist and os.path.exists(f"{dest}.dis"):
             continue
         dis_text = open(dis_file, 'r').read()
-        # TODO proper handle of paragraph tags
         dis_tree = nltk.tree.Tree.fromstring(
             re.sub(r'\s+', ' ', dis_text).replace('//TT_ERR', '').strip(),
             leaf_pattern=r"\_!.+?\_!|[^ ()]+")
@@ -69,7 +71,7 @@ def main(source_path: str, target_path: str):
         parses = parser(text)
         parses = merge_edus_into_parses(edus, parses)
         with open(f"{dest}.dis", 'w') as fh:
-            fh.write(dis_text)
+            fh.write(dis_tree.pformat(margin=150).replace('<P>', ''))
         with open(f"{dest}.merge", 'w') as fh:
             for tok in parses:
                 fh.write('\t'.join(map(str, tok)) + '\n')

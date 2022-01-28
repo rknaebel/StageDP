@@ -42,6 +42,9 @@ class SpanNode(object):
         # level of this node, 0 for inner-sentence, 1 for inter-sentence but inner paragraph, 2 for inter-paragraph
         self.level = 0
 
+    def is_leaf(self):
+        return self.lnode is None and self.rnode is None and len(self.nodelist) == 0
+
     def create_node(self, content):
         """ Assign value to an SpanNode instance
 
@@ -77,4 +80,4 @@ class SpanNode(object):
             self.lnode.relation = relation
             self.rnode.relation = "span"
         else:
-            raise ValueError("Error when assign relation to node with form: {}".format(form))
+            raise ValueError("Error when assign relation to node with form: {}".format(self.form))
