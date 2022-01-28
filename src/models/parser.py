@@ -1,7 +1,8 @@
 import os
 
 from stagedp.features.extraction import ActionFeatureGenerator, RelationFeatureGenerator
-from stagedp.models import ActionClassifier, RelationClassifier
+from stagedp.models.action import ActionClassifier
+from stagedp.models.relation import RelationClassifier
 from stagedp.models.state import ParsingState
 from stagedp.models.tree import RstTree
 
