@@ -1,136 +1,53 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# author: Yizhong
-# created_at: 10/26/2016 下午8:37
-
+import os
 import sys
-from os.path import isfile
 
-from stagedp.features.extraction import ActionFeatureGenerator, RelationFeatureGenerator
-from stagedp.models.state import ParsingState
-from nltk import Tree
 from stagedp.utils.document import Doc
-from stagedp.utils.other import rel2class
 from stagedp.utils.span import SpanNode
 
 
-class RstTree(object):
-    def __init__(self, fdis=None, fmerge=None):
-        self.fdis = fdis
-        self.fmerge = fmerge
+class RstTree:
+    def __init__(self, tree, doc):
         self.binary = True
-        self.tree, self.doc = None, None
-
-    def assign_tree(self, tree):
-        """ Assign a tree instance from external resource
-        """
-        self.tree = tree
-
-    def assign_doc(self, doc):
-        """ Assign a doc instance from external resource
-        """
+        self.tree: SpanNode = tree
         self.doc = doc
+        self.down_prop(self.tree)
+        self.back_prop(self.tree, self.doc)
 
-    # TODO make this static constructor, simplify init with tree and doc (makes more sense to me)
-    def build(self):
+    @staticmethod
+    def from_file(fdis, fmerge):
         """ Build BINARY RST tree
         """
-        with open(self.fdis) as fin:
+        with open(fdis) as fin:
             text = fin.read()
-        # Build RST as annotation
-        self.tree = RstTree.build_tree(text)
-        # Binarize it
-        self.tree = RstTree.binarize_tree(self.tree)
-        # Read doc file
-        if isfile(self.fmerge):
-            doc = Doc()
-            doc.read_from_fmerge(self.fmerge)
-            self.doc = doc
-        else:
-            raise IOError("File doesn't exist: {}".format(self.fmerge))
-        RstTree.down_prop(self.tree)
-        RstTree.back_prop(self.tree, self.doc)
+        tree = RstTree.binarize_tree(RstTree.build_tree(text))
+        doc = Doc.from_file(open(fmerge))
+        return RstTree(tree, doc)
 
-    def generate_action_samples(self, bcvocab):
-        """ Generate action samples from an binary RST tree
-        :type bcvocab: dict
-        :param bcvocab: brown clusters of words
-        """
-        # Parsing actions and relations
-        actions, relations = self.decode_rst_tree()
-        # Initialize queue and stack
-        queue = RstTree.get_edu_node(self.tree)
-        stack = []
-        # Start simulating the shift-reduce parsing
-        sr_parser = ParsingState(stack, queue)
-        for idx, action in enumerate(actions):
-            stack, queue = sr_parser.get_status()
-            # Generate features
-            fg = ActionFeatureGenerator(stack, queue, actions[:idx], self.doc, bcvocab)
-            action_feats = fg.gen_features()
-            yield action_feats, action
-            # Change status of stack/queue
-            # action and relation are necessary here to avoid change rst_trees
-            sr_parser.operate(action)
-
-    def generate_relation_samples(self, bcvocab, level):
-        """ Generate relation samples from an binary RST tree
-        :type bcvocab: dict
-        :param bcvocab: brown clusters of words
-        """
-        post_nodelist = RstTree.postorder_DFT(self.tree, [])
-        for node in post_nodelist:
-            if node.level == level and (node.lnode is not None) and (node.rnode is not None):
-                fg = RelationFeatureGenerator(node, self, node.level, bcvocab)
-                relation_feats = fg.gen_features()
-                form = node.form
-                if (form == 'NN') or (form == 'NS'):
-                    relation = RstTree.extract_relation(node.rnode.relation)
-                else:
-                    relation = RstTree.extract_relation(node.lnode.relation)
-                yield relation_feats, relation
-
-    def decode_rst_tree(self):
-        """ Decoding Shift-reduce actions and span relations from an binary RST tree
-        """
-        # Start decoding
-        post_nodelist = RstTree.postorder_DFT(self.tree, [])
-        action_list = []
-        relation_list = []
-        for node in post_nodelist:
-            if (node.lnode is None) and (node.rnode is None):
-                action_list.append(('Shift', None))
-                relation_list.append(None)
-            elif (node.lnode is not None) and (node.rnode is not None):
-                form = node.form
-                if (form == 'NN') or (form == 'NS'):
-                    relation = RstTree.extract_relation(node.rnode.relation)
-                else:
-                    relation = RstTree.extract_relation(node.lnode.relation)
-                action_list.append(('Reduce', form))
-                relation_list.append(relation)
-            else:
-                raise ValueError("Can not decode Shift-Reduce action")
-        return action_list, relation_list
+    @staticmethod
+    def read_rst_trees(data_dir):
+        files = [os.path.join(data_dir, fname) for fname in os.listdir(data_dir) if fname.endswith('.dis')]
+        rst_trees = []
+        for fdis in files:
+            fmerge = fdis.replace('.dis', '.merge')
+            if not os.path.isfile(fmerge):
+                raise FileNotFoundError('Corresponding .fmerge file does not exist. You should do preprocessing first.')
+            rst_trees.append(RstTree.from_file(fdis, fmerge))
+        return rst_trees
 
     def convert_node_to_str(self, node, sep=' '):
         text = node.text
         words = [self.doc.token_dict[tidx].word for tidx in text]
         return sep.join(words)
 
-    @staticmethod
-    def get_edu_node(tree):
+    def get_edu_node(self):
         """ Get all left nodes. It can be used for generating training
             examples from gold RST tree
 
         :type tree: SpanNode instance
         :param tree: an binary RST tree
         """
-        # Post-order depth-first traversal
-        post_nodelist = RstTree.postorder_DFT(tree, [])
-        # EDU list
         edulist = []
-        for node in post_nodelist:
+        for node in self.postorder():
             if (node.lnode is None) and (node.rnode is None):
                 edulist.append(node)
         return edulist
@@ -143,9 +60,7 @@ class RstTree(object):
         :param text: RST tree read from a *.dis file
         """
         tokens = text.strip().replace('//TT_ERR', '').replace('\n', '').replace('(', ' ( ').replace(')', ' ) ').split()
-        # print 'tokens = {}'.format(tokens)
         queue = RstTree.process_text(tokens)
-        # print 'queue = {}'.format(queue)
         stack = []
         while queue:
             token = queue.pop(0)
@@ -366,22 +281,24 @@ class RstTree(object):
                 queue.append(node.rnode)
         return bft_nodelist
 
-    @staticmethod
-    def postorder_DFT(tree, nodelist):
+    def postorder(self):
         """ Post order traversal on binary RST tree
 
         :type tree: SpanNode instance
         :param tree: an binary RST tree
 
-        :type nodelist: list
-        :param nodelist: list of node in post order
         """
-        if tree.lnode is not None:
-            RstTree.postorder_DFT(tree.lnode, nodelist)
-        if tree.rnode is not None:
-            RstTree.postorder_DFT(tree.rnode, nodelist)
-        nodelist.append(tree)
-        return nodelist
+
+        def _postorder(tree, nodelist):
+            if tree.lnode is not None:
+                _postorder(tree.lnode, nodelist)
+            if tree.rnode is not None:
+                _postorder(tree.rnode, nodelist)
+            nodelist.append(tree)
+
+        node_list = []
+        _postorder(self.tree, node_list)
+        return node_list
 
     @staticmethod
     def __getspaninfo(lnode, rnode):
@@ -452,16 +369,10 @@ class RstTree(object):
         """
         # text = lnode.text + " " + rnode.text
         text = []
-        for idx in range(edu_span[0], edu_span[1] + 1, 1):
+        for idx in range(edu_span[0], edu_span[1] + 1):
             text += edu_dict[idx]
         # Return: A list of token indices
         return text
-
-    @staticmethod
-    def extract_relation(s, level=0):
-        """ Extract discourse relation on different level
-        """
-        return rel2class[s.lower()]
 
     def get_parse(self):
         """ Get parse tree
@@ -483,11 +394,11 @@ class RstTree(object):
                 parse.append(" ( " + node.form)
                 # get the relation from its satellite node
                 if node.form == 'NN':
-                    parse += "-" + RstTree.extract_relation(node.rnode.relation)
+                    parse += "-" + node.rnode.relation
                 elif node.form == 'NS':
-                    parse += "-" + RstTree.extract_relation(node.rnode.relation)
+                    parse += "-" + node.rnode.relation
                 elif node.form == 'SN':
-                    parse += "-" + RstTree.extract_relation(node.lnode.relation)
+                    parse += "-" + node.lnode.relation
                 else:
                     raise ValueError("Unrecognized N-S form")
             node_list.append(' ) ')
@@ -516,11 +427,11 @@ class RstTree(object):
     def bracketing(self):
         """ Generate brackets according an Binary RST tree
         """
-        nodelist = RstTree.postorder_DFT(self.tree, [])
+        nodelist = self.postorder()
         nodelist.pop()  # Remove the root node
         brackets = []
         for node in nodelist:
-            relation = RstTree.extract_relation(node.relation)
+            relation = node.relation
             b = (node.edu_span, node.prop, relation)
             brackets.append(b)
         return brackets
