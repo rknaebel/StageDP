@@ -16,62 +16,13 @@ def reverse_dict(dct):
     return newmap
 
 
-def str2action(action_str):
-    """ Transform label to action
-    """
-    items = action_str.split('-')
-    if len(items) == 1:
-        action = (items[0], None, None)
-    elif len(items) == 3:
-        action = tuple(items)
-    elif len(items) > 3:
-        relalabel = '-'.join(items[2:])
-        action = tuple((items[0], items[1], relalabel))
-    else:
-        raise ValueError("Unrecognized label: {}".format(action_str))
-    return action
-
-
-def action2str(action):
-    """ Transform action into action_str
-    """
-    if action[0] == 'Shift':
-        action_str = action[0]
-    elif action[0] == 'Reduce':
-        action_str = '-'.join(list(action))
-    else:
-        raise ValueError("Unrecognized parsing action: {}".format(action))
-    return action_str
-
-
-def vectorize(features, vocab):
-    """ Transform a features list into a numeric vector
-        with a given vocab
-
-    :type dpvocab: dict
-    :param dpvocab: vocab for distributional representation
-
-    :type projmat: scipy.lil_matrix
-    :param projmat: projection matrix for disrep
-    """
-    vec = lil_matrix((1, len(vocab)))
-
-    for feat in features:
-        try:
-            fidx = vocab[feat]
-            vec[0, fidx] += 1.0
-        except KeyError:
-            pass
-    # Normalization
-    vec = normalize(vec)
-    return vec
-
-
 class2rel = {
     'Attribution': ['attribution', 'attribution-e', 'attribution-n', 'attribution-negative'],
     'Background': ['background', 'background-e', 'circumstance', 'circumstance-e'],
     'Cause': ['cause', 'cause-result', 'result', 'result-e', 'consequence', 'consequence-n-e', 'consequence-n',
-              'consequence-s-e', 'consequence-s'],
+              'consequence-s-e', 'consequence-s',
+              'motivation', 'justify',  # gum corpus
+              ],
     'Comparison': ['comparison', 'comparison-e', 'preference', 'preference-e', 'analogy', 'analogy-e', 'proportion'],
     'Condition': ['condition', 'condition-e', 'hypothetical', 'contingency', 'otherwise'],
     'Contrast': ['contrast', 'concession', 'concession-e', 'antithesis', 'antithesis-e'],
@@ -79,7 +30,9 @@ class2rel = {
                     'elaboration-general-specific', 'elaboration-part-whole', 'elaboration-part-whole-e',
                     'elaboration-process-step', 'elaboration-process-step-e', 'elaboration-object-attribute-e',
                     'elaboration-object-attribute', 'elaboration-set-member', 'elaboration-set-member-e', 'example',
-                    'example-e', 'definition', 'definition-e'],
+                    'example-e', 'definition', 'definition-e',
+                    'preparation',  # gum corpus
+                    ],
     'Enablement': ['purpose', 'purpose-e', 'enablement', 'enablement-e'],
     'Evaluation': ['evaluation', 'evaluation-n', 'evaluation-s-e', 'evaluation-s', 'interpretation-n',
                    'interpretation-s-e', 'interpretation-s', 'interpretation', 'conclusion', 'comment', 'comment-e',
@@ -102,6 +55,6 @@ class2rel = {
 
 rel2class = {}
 for cl, rels in class2rel.items():
-    rel2class[cl.lower()] = cl
+    rel2class[cl.lower().replace('_', '-')] = cl
     for rel in rels:
         rel2class[rel.lower()] = cl
