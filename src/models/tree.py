@@ -375,57 +375,27 @@ class RstTree:
         return text
 
     def get_parse(self):
-        """ Get parse tree
-
-        :type tree: SpanNode instance
-        :param tree: an binary RST tree
+        """ Get parse tree in dis format.
         """
-        parse = []
-        node_list = [self.tree]
-        while node_list:
-            node = node_list.pop()
-            if node == ' ) ':
-                parse.append(' ) ')
-                continue
-            if (node.lnode is None) and (node.rnode is None):
-                # parse.append(" ( EDU " + str(node.nuc_edu))
-                parse.append(" ( EDU " + '_!' + self.convert_node_to_str(node, sep='_') + '!_')
+        type_map = {n[0]: n for n in ['Nucleus', 'Satellite']}
+
+        def get_form(form):
+            return type_map[form[0]], type_map[form[1]]
+
+        def _helper(node, node_form):
+            if node.is_leaf():
+                return f"({node_form} (leaf {node.edu_span[0]}) (rel2par {node.relation}) (text _!{self.convert_node_to_str(node, sep='_')}_!))"
             else:
-                parse.append(" ( " + node.form)
-                # get the relation from its satellite node
-                if node.form == 'NN':
-                    parse += "-" + node.rnode.relation
-                elif node.form == 'NS':
-                    parse += "-" + node.rnode.relation
-                elif node.form == 'SN':
-                    parse += "-" + node.lnode.relation
+                lnode_form, rnode_form = get_form(node.form)
+                if node_form != 'Root':
+                    return f"({node_form} (span {node.edu_span}) (rel2par {node.relation}) {_helper(node.lnode, lnode_form)} {_helper(node.rnode, rnode_form)})"
                 else:
-                    raise ValueError("Unrecognized N-S form")
-            node_list.append(' ) ')
-            if node.rnode is not None:
-                node_list.append(node.rnode)
-            if node.lnode is not None:
-                node_list.append(node.lnode)
-        return ''.join(parse)
+                    return f"(Root (span {node.edu_span}) {_helper(node.lnode, lnode_form)} {_helper(node.rnode, rnode_form)})"
 
-    # TODO check remove?
-    def draw_rst(self, fname):
-        """ Draw RST tree into a file
-        """
-        from nltk.draw.tree import TreeWidget
-        from nltk.draw.util import CanvasFrame
-        tree_str = self.get_parse()
-        if not fname.endswith(".ps"):
-            fname += ".ps"
-        cf = CanvasFrame()
-        t = Tree.fromstring(tree_str)
-        tc = TreeWidget(cf.canvas(), t)
-        cf.add_widget(tc, 10, 10)  # (10,10) offsets
-        cf.print_to_file(fname)
-        cf.destroy()
+        return _helper(self.tree, 'Root')
 
     def bracketing(self):
-        """ Generate brackets according an Binary RST tree
+        """ Generate brackets according a Binary RST tree
         """
         nodelist = self.postorder()
         nodelist.pop()  # Remove the root node
