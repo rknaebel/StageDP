@@ -8,7 +8,7 @@ from utils.other import ActionError, ParseError
 from utils.span import SpanNode
 
 
-class ParsingState(object):
+class ParsingState:
     def __init__(self, stack, queue):
         """ Initialization
         """
