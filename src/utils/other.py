@@ -1,31 +1,9 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# author: Yizhong
-# created_at: 10/26/2016 下午8:45
-from scipy.sparse import lil_matrix
-from sklearn.preprocessing import normalize
-
-
 class ParseError(Exception):
-    """ Exception for parsing
-    """
-
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
+    pass
 
 
 class ActionError(Exception):
-    """ Exception for illegal parsing action
-    """
-
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
+    pass
 
 
 def reverse_dict(dct):

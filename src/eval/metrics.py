@@ -1,30 +1,18 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# author: Yizhong
-# created_at: 10/27/2016 下午8:34
-
 import numpy
 
 
-class Performance(object):
-    def __init__(self, percision, recall, hit_num):
-        self.percision = percision
-        self.recall = recall
-        self.hit_num = hit_num
+class Performance:
+    def __init__(self):
+        self.percision = []
+        self.recall = []
+        self.hit_num = 0
 
 
-class Metrics(object):
-    def __init__(self, levels=['span', 'nuclearity', 'relation']):
-        """ Initialization
-
-        :type levels: list of string
-        :param levels: eval levels, the possible values are only
-                       'span','nuclearity','relation'
-        """
-        self.levels = levels
-        self.span_perf = Performance([], [], 0)
-        self.nuc_perf = Performance([], [], 0)
-        self.rela_perf = Performance([], [], 0)
+class Metrics:
+    def __init__(self):
+        self.span_perf = Performance()
+        self.nuc_perf = Performance()
+        self.rela_perf = Performance()
         self.span_num = 0
         self.hit_num_each_relation = {}
         self.pred_num_each_relation = {}
@@ -42,15 +30,9 @@ class Metrics(object):
         goldbrackets = goldtree.bracketing()
         predbrackets = predtree.bracketing()
         self.span_num += len(goldbrackets)
-        for level in self.levels:
-            if level == 'span':
-                self._eval(goldbrackets, predbrackets, idx=1)
-            elif level == 'nuclearity':
-                self._eval(goldbrackets, predbrackets, idx=2)
-            elif level == 'relation':
-                self._eval(goldbrackets, predbrackets, idx=3)
-            else:
-                raise ValueError("Unrecognized eval level: {}".format(level))
+        self._eval(goldbrackets, predbrackets, idx=1)
+        self._eval(goldbrackets, predbrackets, idx=2)
+        self._eval(goldbrackets, predbrackets, idx=3)
 
     def _eval(self, goldbrackets, predbrackets, idx):
         """ Evaluation on each discourse span
@@ -109,52 +91,34 @@ class Metrics(object):
                 else:
                     self.pred_num_each_relation[relation] = 1
 
+    def report_part(self, part, part_label):
+        p = numpy.array(part.percision).mean()
+        # r = numpy.array(part.recall).mean()
+        # f1 = (2 * p * r) / (p + r)
+        print(f'Average precision on {part_label} level is {p:.4f}')
+        # print('Recall on span level is {0:.4f}'.format(r))
+        # print('F1 score on span level is {0:.4f}'.format(f1))
+        print(f'Global precision on {part_label} level is {part.hit_num / self.span_num:.4f}')
+
     def report(self):
         """ Compute the F1 score for different eval levels
             and print it out
         """
-        for level in self.levels:
-            if 'span' == level:
-                p = numpy.array(self.span_perf.percision).mean()
-                r = numpy.array(self.span_perf.recall).mean()
-                f1 = (2 * p * r) / (p + r)
-                print('Average precision on span level is {0:.4f}'.format(p))
-                # print('Recall on span level is {0:.4f}'.format(r))
-                # print('F1 score on span level is {0:.4f}'.format(f1))
-                print('Global precision on span level is {0:.4f}'.format(self.span_perf.hit_num / self.span_num))
-            elif 'nuclearity' == level:
-                p = numpy.array(self.nuc_perf.percision).mean()
-                r = numpy.array(self.nuc_perf.recall).mean()
-                f1 = (2 * p * r) / (p + r)
-                print('Average precision on nuclearity level is {0:.4f}'.format(p))
-                # print('Recall on nuclearity level is {0:.4f}'.format(r))
-                # print('F1 score on nuclearity level is {0:.4f}'.format(f1))
-                print('Global precision on nuclearity level is {0:.4f}'.format(self.nuc_perf.hit_num / self.span_num))
-            elif 'relation' == level:
-                p = numpy.array(self.rela_perf.percision).mean()
-                r = numpy.array(self.rela_perf.recall).mean()
-                f1 = (2 * p * r) / (p + r)
-                print('Average precision on relation level is {0:.4f}'.format(p))
-                # print('Recall on relation level is {0:.4f}'.format(r))
-                # print('F1 score on relation level is {0:.4f}'.format(f1))
-                print('Global precision on relation level is {0:.4f}'.format(self.rela_perf.hit_num / self.span_num))
-            else:
-                raise ValueError("Unrecognized eval level")
+        self.report_part(self.span_perf, "span")
+        self.report_part(self.nuc_perf, "nuclearity")
+        self.report_part(self.rela_perf, "relation")
         # sorted_relations = sorted(self.gold_num_each_relation.keys(), key=lambda x: self.gold_num_each_relation[x])
         sorted_relations = sorted(self.gold_num_each_relation.keys())
+        print("= " * 55)
         for relation in sorted_relations:
             hit_num = self.hit_num_each_relation[relation] if relation in self.hit_num_each_relation else 0
             gold_num = self.gold_num_each_relation[relation]
             pred_num = self.pred_num_each_relation[relation] if relation in self.pred_num_each_relation else 0
             precision = hit_num / pred_num if pred_num > 0 else 0
             recall = hit_num / gold_num
-            try:
-                f1 = 2 * precision * recall / (precision + recall)
-            except ZeroDivisionError:
+            if precision + recall == 0:
                 f1 = 0
-            print(
-                'Relation\t{:20}\tgold_num\t{:4d}\tprecision\t{:05.4f}\trecall\t{:05.4f}\tf1\t{:05.4f}'.format(relation,
-                                                                                                               gold_num,
-                                                                                                               precision,
-                                                                                                               recall,
-                                                                                                               f1))
+            else:
+                f1 = 2 * precision * recall / (precision + recall)
+            print(f'Relation\t{relation:20}\tgold_num\t{gold_num:4d}\t'
+                  f'precision\t{precision:05.4f}\trecall\t{recall:05.4f}\tf1\t{f1:05.4f}')
