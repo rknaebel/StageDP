@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from utils.token import Token
+from stagedp.utils.token import Token
 
 
 class Doc:

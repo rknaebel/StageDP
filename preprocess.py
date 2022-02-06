@@ -35,14 +35,25 @@ def main(source_path: str, target_path: str, replace_exist: bool, delete_target:
             label = tt.pop()
             tt.insert(0, rel2class.get(label.lower(), label.upper()))
         edus = [edu[2:-2].strip() for edu in dis_tree.leaves() if edu.startswith('_!')]
-        text = ' '.join(edus).replace('<P>', '')
-        parses = parser(text)
+        sentences = []
+        edus_tmp = []
+        for edu in edus:
+            edu = edu.replace('<P>', '')
+            edus_tmp.append(edu)
+            if edu[-1] in ".!?":
+                sentences.append(' '.join(edus_tmp))
+                edus_tmp = []
+        if edus_tmp:
+            sentences.append(' '.join(edus_tmp))
+        parses = [parser(sent).sentences[0] for sent in sentences]
+        # text = ' '.join(edus).replace('<P>', '')
+        # parses = parser(parsed_sents, is_sent=True)
         parses = merge_edus_into_parses(edus, parses)
         with open(f"{dest}.dis", 'w') as fh:
             fh.write(dis_tree.pformat(margin=150).replace('<P>', ''))
-        with open(f"{dest}.merge", 'w') as fh:
-            for tok in parses:
-                fh.write('\t'.join(map(str, tok)) + '\n')
+        with open(f"{dest}.conll", 'w') as fh:
+            for sent in parses:
+                fh.write(sent.serialize())
 
 
 if __name__ == '__main__':
