@@ -1,8 +1,8 @@
 # Two-stage Discourse Parser
 
-Here we implement the RST discourse parser described in [A Two-stage Parsing Method for Text-level Discourse Analysis](http://aclanthology.coli.uni-saarland.de/pdf/P/P17/P17-2029.pdf). 
-
-The best-trained models are put in the `data/model` folder. Due to the licence of RST data corpus, we can't include the data in our project folder. To reproduce the result in the paper, you need to download it from the LDC, preprocess the data as we state below and evaluate the model with `python3 main.py --eval --eval_dir EVAL_DIR`.  
+Here is a refactoring of the implementation of the RST discourse parser described in [A Two-stage Parsing Method for Text-level Discourse Analysis](http://aclanthology.coli.uni-saarland.de/pdf/P/P17/P17-2029.pdf). 
+Due to the licence of RST data corpus, the training data is not included in our project folder. 
+To reproduce the result in the paper, download it from the LDC, preprocess the data as stated below.
 
 ### Usage:
 
@@ -24,4 +24,5 @@ The best-trained models are put in the `data/model` folder. Due to the licence o
 
 ### Requirements:
 
-All the codes are tested under Python 3.5. And see requirements.txt for python library dependency and you can install them with pip.
+Currently runs under Python 3.7.
+The models are rewritten in sklearn. See requirements.txt for more details.

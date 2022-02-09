@@ -2,16 +2,14 @@ FROM python:3.7
 
 RUN pip install -U pip setuptools wheel
 
-ADD requirements.txt /opt/stage-dp/
+ADD requirements.txt /app
 
-WORKDIR /opt/stage-dp
+WORKDIR /app
 RUN pip install -r requirements.txt
 
-COPY data /opt/stage-dp/data
-COPY src /opt/stage-dp/src
-COPY tests /opt/stage-dp/tests
-COPY setup.py README.md /opt/stage-dp/
+COPY data data
+COPY src src
+COPY setup.py README.md ./
 RUN pip install -e .
 
-ENTRYPOINT ["python", "src/stagedp/parser_wrapper.py"]
-
+ENTRYPOINT python stagedp/main.py
